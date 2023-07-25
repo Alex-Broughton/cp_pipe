@@ -255,7 +255,7 @@ class BrighterFatterKernelSolveTask(pipeBase.PipelineTask):
             _C_model = np.asarray(inputPtc.covariancesModel[ampName])[mask]
             _n = inputPtc.noise[ampName]
 
-                A = (_C_model[0] / _mu**2) - (_mu/_g + _n/_g**2)/(_mu**2)
+            A = (_C_model[0] / _mu**2) - (_mu/_g + _n/_g**2)/(_mu**2)
 
             if gain <= 0:
                 # We've received very bad data.

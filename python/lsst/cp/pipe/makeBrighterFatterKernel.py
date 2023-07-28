@@ -248,15 +248,14 @@ class BrighterFatterKernelSolveTask(pipeBase.PipelineTask):
             index = np.argmin( ( np.asarray(inputPtc.rawMeans[ampName]) - self.config.covSample )**2 )
             mask[index] = True # added
             
-            # Convert to A matrix
+            # Convert to A matrix preKernel
             _n = inputPtc.noiseMatrix[ampName] 
             _g  = inputPtc.gain[ampName] 
             _mu = np.asarray(inputPtc.rawMeans[ampName])[mask]
             _C_model = np.asarray(inputPtc.covariancesModel[ampName])[mask]
-            _n = inputPtc.noise[ampName]
 
             A = (_C_model[0] / _mu**2) - (_n/_g**2)/(_mu**2)
-            A[0][0] = (_C_model[0][0][0] / _mu**2) - (_mu/_g + _n/_g**2)/(_mu**2)
+            A[0][0] = (_C_model[0][0][0] / _mu**2) - (_mu/_g + _n[0][0]/_g**2)/(_mu**2)
 
             if gain <= 0:
                 # We've received very bad data.

@@ -139,7 +139,7 @@ class BrighterFatterKernelSolveConfig(pipeBase.PipelineTaskConfig,
     )
     covSample = pexConfig.Field(
         dtype=float,
-        doc="Signal level in ADU where to sample the covariance model.",
+        doc="Signal level in e- where to sample the covariance model.",
         default=0.0,
     )
 
@@ -245,19 +245,18 @@ class BrighterFatterKernelSolveTask(pipeBase.PipelineTask):
                 
             # Get single Cov model sample (override the mask)
             mask = np.zeros(mask.shape, dtype=bool) # added
-            index = np.argmin( ( np.asarray(inputPtc.rawMeans[ampName]) - self.config.covSample )**2 )
+            index = np.argmin( ( np.asarray(inputPtc.rawMeans[ampName])*inputPtc.gain[ampName] - self.config.covSample )**2 )
             mask[index] = True # added
             
-            # Convert to A matrix
+            # Convert to A matrix preKernel
             _n = inputPtc.noiseMatrix[ampName] 
             _g  = inputPtc.gain[ampName] 
             _mu = np.asarray(inputPtc.rawMeans[ampName])[mask]
             _C_model = np.asarray(inputPtc.covariancesModel[ampName])[mask]
-            _n = inputPtc.noise[ampName]
 
             A = (_C_model[0] / _mu**2) - (_n/_g**2)/(_mu**2)
-            A[0][0] = (_C_model[0][0][0] / _mu**2) - (_mu/_g + _n/_g**2)/(_mu**2)
-
+            A[0][0] = (_C_model[0][0][0] / _mu**2) - (_mu/_g + _n[0][0]/_g**2)/(_mu**2)
+            
             if gain <= 0:
                 # We've received very bad data.
                 self.log.warning("Impossible gain recieved from PTC for %s: %f. Skipping bad amplifier.",
@@ -340,7 +339,7 @@ class BrighterFatterKernelSolveTask(pipeBase.PipelineTask):
                 #preKernel = np.pad(self._tileArray(-1.0 * self.config.scaleFactor * np.array(inputPtc.aMatrix[ampName])), ((1, 1)))
                 
                 # Use the analytical A matrix from sampled covariance model
-                preKernel = np.pad(self._tileArray(A), ((1, 1)))
+                preKernel = np.pad(-1.0 * self._tileArray(A), ((1, 1)))
                 
             elif self.config.correlationQuadraticFit:
                 # Use a quadratic fit to the correlations as a
@@ -362,6 +361,9 @@ class BrighterFatterKernelSolveTask(pipeBase.PipelineTask):
                     slopeFactor = 2.0 * np.abs(self.config.correlationModelSlope)
                     totalSum += 2.0*np.pi*(preFactor / (slopeFactor*(center + 0.5))**slopeFactor)
 
+                post = preKernel[center, center] -  totalSum
+                pre = preKernel[center, center]
+                self.log.info("ForceZeroSum %s preKernel[center] Pre: %g, Post: %g, (Post-Pre)/Pre: %g", ampName, pre, post, (pre-post)/pre)
                 preKernel[center, center] -= totalSum
                 self.log.info("%s Zero-Sum Scale: %g", ampName, totalSum)
 

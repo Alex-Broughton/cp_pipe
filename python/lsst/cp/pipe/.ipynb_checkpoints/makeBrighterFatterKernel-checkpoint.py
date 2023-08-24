@@ -245,7 +245,8 @@ class BrighterFatterKernelSolveTask(pipeBase.PipelineTask):
                 
             # Get single Cov model sample (override the mask)
             mask = np.zeros(mask.shape, dtype=bool) # added
-            index = np.argmin( ( np.asarray(inputPtc.rawMeans[ampName])*inputPtc.gain[ampName] - self.config.covSample )**2 )
+            #self.config.covSample = inputPtc.gain[ampName] * pcti[detName]
+            index = np.argmin( ( np.asarray(inputPtc.rawMeans[ampName])*inputPtc.gain[ampName] - (inputPtc.gain[ampName] * pcti[detName]) )**2 )
             mask[index] = True # added
             
             # Convert to A matrix preKernel
@@ -336,7 +337,7 @@ class BrighterFatterKernelSolveTask(pipeBase.PipelineTask):
 
             if self.config.useAmatrix:
                 # Use the aMatrix, ignoring the meanXcorr generated above.
-                #preKernel = np.pad(self._tileArray(-1.0 * self.config.scaleFactor * np.array(inputPtc.aMatrix[ampName])), ((1, 1)))
+                #preKernel = np.pad(self._tileArray(-1.0 * np.array(inputPtc.aMatrix[ampName])), ((1, 1)))
                 
                 # Use the analytical A matrix from sampled covariance model
                 preKernel = np.pad(-1.0 * self._tileArray(A), ((1, 1)))
